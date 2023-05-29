@@ -1,0 +1,1 @@
+2023-05-28 17:17:06.085 uiauti.py[3] <module> -> Find Control Timeout(10s): {Name: 'スタート', ControlType: ButtonControl}
