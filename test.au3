@@ -40,6 +40,9 @@ Func _Example()
 	Local $nCid = 1707
 	Local $sSeikaSay2Command
 
+	; デバッグ用
+	Local $fLog = FileOpen("log.txt", $FO_OVERWRITE + $FO_UTF8)
+
     ; 変愚蛮怒のウィンドウハンドラを取得
     $hWindow = WinGetHandle("[CLASS:ANGBAND]")
 	if @error Then
@@ -75,9 +78,7 @@ Func _Example()
 		MouseMove($posMouse[0], $posMouse[1], 0)
 		$sText = ClipGet()
 		$sText = StringStripWS($sText, $STR_STRIPLEADING + $STR_STRIPTRAILING + $STR_STRIPSPACES)
-		; Local $fLog = FileOpen("log.txt", $FO_APPEND + $FO_UTF8)
-		; FileWriteLine($fLog, $sText)
-		; FileClose($fLog)
+		FileWriteLine($fLog, $sText)
 
 		; 発話に不適な文字列ならば空振りする
 		If Not _IsSpeakText($sText) Then
@@ -95,22 +96,20 @@ Func _Example()
 		EndIf
 
 		; 発話
+		FileWriteLine($fLog, $sText)
 		$sLastText = $sText
-		;ConsoleWrite($sText)
 		$sSeikaSay2Command = @ComSpec & " /c " & """" & $sSeikaSay2Path & """ -cid " & $nCid & " -t " & $sText
-		;ConsoleWrite($sSeikaSay2Command & @CRLF)
 		RunWait($sSeikaSay2Command, "", @SW_HIDE)
 		;MsgBox(0, "", $sText)
 
 	WEnd
 
+	FileClose($fLog)
+
 EndFunc   ;==>_Example
 
 Func _IsSpeakText($sText)	; 発話すべき文字列か否かを返す
 	If StringRegExp($sText, "-続く-$") Or StringRegExp($sText, "-more-$") Or StringRegExp($sText, "。$") Or StringRegExp($sText, "\\.$") Or StringRegExp($sText, "！$") Or StringRegExp($sText, "!$") Then
-		Local $fLog = FileOpen("log.txt", $FO_APPEND + $FO_UTF8)
-		FileWriteLine($fLog, $sText)
-		FileClose($fLog)
 		Return True
 	EndIf
 
@@ -137,8 +136,8 @@ Func _ModiryText($sText)	; 文字列から発話に不適な部分を削除す�
 	$sText = StringReplace($sText, "(復讐者)", " 復讐者 ")
 
 	; 括弧を中身ごと削除
-	$sText = StringRegExpReplace($sText, "\\(.*?\\)", "")
-	$sText = StringRegExpReplace($sText, "\\[.*?\\]", "")
+	$sText = StringRegExpReplace($sText, "\\(.*\\)", "")
+	$sText = StringRegExpReplace($sText, "\\[.*\\]", "")
 
 	; アスタリスクを削除
 	$sText = StringReplace($sText, "*", "")
