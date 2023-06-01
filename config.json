@@ -1,4 +1,13 @@
 {
+    "SeikaSay2Path": "C:\\Program Files\\510Product\\SeikaSay2\\SeikaSay2.exe",
+    "cid": 1707,
+    "MouseClickDragPos": [
+        12,
+        59,
+        12,
+        59
+    ],
+
     "IgnoreLineWords": [
         "コマンド:$",
         "ターゲット:"

@@ -5,3 +5,5 @@ api
 source/inspector.html
 .venv
 log.txt
+debug.txt
+test.au3
