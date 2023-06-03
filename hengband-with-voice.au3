@@ -1,8 +1,12 @@
 #include <AutoItConstants.au3>
 #include <Constants.au3>
 #include <FileConstants.au3>
+#include <GUIConstantsEx.au3>
 #include <MsgBoxConstants.au3>
 #include <StringConstants.au3>
+
+; GUIイベントモードをOnEventモードに切り替え
+Opt("GUIOnEventMode", 1)
 
 ; iniファイルのセクション名とキー名
 Local Const $sIniFileName = "config.ini"
@@ -16,9 +20,35 @@ Local Const $sIniKeyMouseClickDragY1 = "MouseClickDragY1"
 Local Const $sIniKeyMouseClickDragX2 = "MouseClickDragX2"
 Local Const $sIniKeyMouseClickDragY2 = "MouseClickDragY2"
 
+; 変数
+Local $guiWindow
+Local $guiExitButton
+Local $bExit = False
 
+_CreateWindow()
 _Main()
 Exit
+
+Func _CreateWindow()
+	$guiWindow = GUICreate(@ScriptName, 600, 200)
+	GUICtrlCreateLabel("変愚蛮怒のウィンドウがアクティブになると発話を開始します。", 30, 10)
+	GUICtrlCreateLabel("発話を止めたい場合は、Alt+Tabを押して変愚蛮怒以外のウィンドウをアクティブにしてください。", 30, 30)
+	GUICtrlCreateLabel("発話されない場合、原因は大体以下の通りです。", 30, 50)
+	GUICtrlCreateLabel("・音声合成製品が起動していない。", 30, 70)
+	GUICtrlCreateLabel("・AssistantSeikaが起動していない。", 30, 90)
+	GUICtrlCreateLabel("・AssistantSeikaの製品スキャンを実行していない＝話者一覧が空。", 30, 110)
+	GUICtrlCreateLabel("・config.iniで指定しているcidが話者一覧に無い。", 30, 130)
+	GUICtrlCreateLabel("・変愚蛮怒のウィンドウがアクティブであるときに、ポインタを動かしている。", 30, 150)
+	$guiExitButton = GUICtrlCreateButton("終了", 70, 170, 60)
+	GUICtrlSetOnEvent($guiExitButton, "_OnExitButton")
+	GUISetOnEvent($GUI_EVENT_CLOSE, "_OnExitButton")
+	GUISetState(@SW_SHOW)
+EndFunc   ;==>_CreateWindow
+
+Func _OnExitButton()
+	; 終了ボタンを押すと終了フラグを立てる
+	$bExit = True
+EndFunc   ;==>_OnExitButton
 
 Func _Main()
 	; 変愚蛮怒
@@ -62,17 +92,26 @@ Func _Main()
 	EndIf
 	WinWaitActive($hWindow)	; 変愚蛮怒のウィンドウをアクティブ化を待つ
 
+	; SeikaSay2が正常に帰ってくることを確認
+	; TODO
+
 	; ログファイルを開く（デバッグ用なんでそのうち消すかも）
 	Local $fLog = FileOpen("log.txt", $FO_OVERWRITE + $FO_UTF8)
 
 	; メインループ
 	While True
+		; 終了フラグが立っていればループを抜ける
+		If $bExit Then
+			ExitLoop
+		EndIf
+
 		; ウィンドウの状態取得
 		$nWindowState = WinGetState($hWindow)
 		; ウィンドウが存在しなければループを抜ける
 		If @error Then
 			ExitLoop
 		EndIf
+
 		; ウィンドウが存在しない、不可視である、操作不可である、非アクティブである、最小化されている、のいずれかに合致したら空振りする
 		If BitAND($nWindowState, 15) <> 15 Or BitAND($nWindowState, 32) == 32 Then
 			Sleep(1000)
