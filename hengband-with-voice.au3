@@ -4,18 +4,31 @@
 #include <MsgBoxConstants.au3>
 #include <StringConstants.au3>
 
-_Example()
+; iniファイルのセクション名とキー名
+Local Const $sIniFileName = "config.ini"
+Local Const $sIniSectionAssistantSeika = "AssistantSeika"
+Local Const $sIniKeySeikaSay2Path = "SeikaSay2Path"
+Local Const $sIniKeyCid = "cid"
+Local Const $sIniSectionWindow = "Window"
+Local Const $sIniKeyTitle = "title"
+Local Const $sIniKeyMouseClickDragX1 = "MouseClickDragX1"
+Local Const $sIniKeyMouseClickDragY1 = "MouseClickDragY1"
+Local Const $sIniKeyMouseClickDragX2 = "MouseClickDragX2"
+Local Const $sIniKeyMouseClickDragY2 = "MouseClickDragY2"
+
+
+_Main()
 Exit
 
-Func _Example()
+Func _Main()
 	; 変愚蛮怒
 	Local $nWindowState
 	Local $posWindow
-	Local $nWindowShadowWidth = 8
-	Local $nTitleBarHeight = 23
-	Local $nMenuBarHeight = 20
-	Local $nCharWidth = 8
-	Local $nCharHeight = 16
+	; Local $nWindowShadowWidth = 8
+	; Local $nTitleBarHeight = 23
+	; Local $nMenuBarHeight = 20
+	; Local $nCharWidth = 8
+	; Local $nCharHeight = 16
 	Local $nLineX1
 	Local $nLineY1
 	Local $nLineX2
@@ -25,33 +38,41 @@ Func _Example()
 	Local $posMouse
 
 	; 設定ファイル読込
+	IniReadSectionNames($sIniFileName)
+	If @error Then
+		_AbnormalEnd($sIniFileName & " ファイルが見つかりませんでした。終了します。")
+	EndIf
 	
-	
-	; SeikaSay2
-	Local $sSeikaSay2Path = "C:\Program Files\510Product\SeikaSay2\SeikaSay2.exe"
-	Local $nCid = 1707
+	; 設定ファイル読込：SeikaSay2
+	Local $sSeikaSay2Path = _IniRead($sIniSectionAssistantSeika, $sIniKeySeikaSay2Path)
+	Local $sCid = _IniRead($sIniSectionAssistantSeika, $sIniKeyCid)
 	Local $sSeikaSay2Command
 
-    ; 変愚蛮怒のウィンドウハンドラを取得
-    $hWindow = WinGetHandle("[CLASS:ANGBAND]")
-	if @error Then
-		MsgBox(0, "", "変愚蛮怒のウィンドウが見つかりませんでした。\r\n終了します。")
-		Return
-	EndIf
-	WinWaitActive($hWindow)
+	; 設定ファイル読込：1行目の相対座標
+	Local $nMouseClickDragX1 = Number(_IniRead($sIniSectionWindow, $sIniKeyMouseClickDragX1))
+	Local $nMouseClickDragY1 = Number(_IniRead($sIniSectionWindow, $sIniKeyMouseClickDragY1))
+	Local $nMouseClickDragX2 = Number(_IniRead($sIniSectionWindow, $sIniKeyMouseClickDragX2))
+	Local $nMouseClickDragY2 = Number(_IniRead($sIniSectionWindow, $sIniKeyMouseClickDragY2))
 
-	; ログ出力
+    ; 変愚蛮怒のウィンドウハンドラを取得、見つからなかったら終了
+	Local $sWindowTitle = _IniRead($sIniSectionWindow, $sIniKeyTitle)
+    $hWindow = WinGetHandle($sWindowTitle)
+	if @error Then
+		_AbnormalEnd("変愚蛮怒のウィンドウが見つかりませんでした。\r\n終了します。")
+	EndIf
+	WinWaitActive($hWindow)	; 変愚蛮怒のウィンドウをアクティブ化を待つ
+
+	; ログファイルを開く（デバッグ用なんでそのうち消すかも）
 	Local $fLog = FileOpen("log.txt", $FO_OVERWRITE + $FO_UTF8)
 
 	; メインループ
 	While True
+		; ウィンドウの状態取得
 		$nWindowState = WinGetState($hWindow)
-
 		; ウィンドウが存在しなければループを抜ける
 		If @error Then
 			ExitLoop
 		EndIf
-
 		; ウィンドウが存在しない、不可視である、操作不可である、非アクティブである、最小化されている、のいずれかに合致したら空振りする
 		If BitAND($nWindowState, 15) <> 15 Or BitAND($nWindowState, 32) == 32 Then
 			Sleep(1000)
@@ -60,10 +81,10 @@ Func _Example()
 
 		; 1行目の矩形の座標を決定
 		$posWindow = WinGetPos($hWindow)
-		$nLineX1 = $posWindow[0] + $nWindowShadowWidth + $nCharWidth / 2
-		$nLineY1 = $posWindow[1] + $nWindowShadowWidth + $nTitleBarHeight + $nMenuBarHeight + $nCharHeight / 2
-		$nLineX2 = $posWindow[0] + $posWindow[2] - $nWindowShadowWidth * 2 - $nCharWidth / 2
-		$nLineY2 = $posWindow[1] + $nWindowShadowWidth + $nTitleBarHeight + $nMenuBarHeight + $nCharHeight / 2
+		$nLineX1 = $posWindow[0] + $nMouseClickDragX1
+		$nLineY1 = $posWindow[1] + $nMouseClickDragY1
+		$nLineX2 = $posWindow[0] + $posWindow[2] - $nMouseClickDragX2
+		$nLineY2 = $posWindow[1] + $nMouseClickDragY2
 
 		; 1行目の文字列を取得
 		$posMouse = MouseGetPos()
@@ -73,14 +94,19 @@ Func _Example()
 		$sText = StringStripWS($sText, $STR_STRIPLEADING + $STR_STRIPTRAILING + $STR_STRIPSPACES)
 		FileWriteLine($fLog, $sText)
 
+		; 発話に不適な部分を削除する
+		$sText = _ModiryText($sText)
+		FileWriteLine($fLog, $sText)
+
 		; 発話に不適な文字列ならば空振りする
 		If Not _IsSpeakText($sText) Then
 			Sleep(1000)
 			ContinueLoop
 		EndIf
 
-		; 発話に不適な部分を削除する
-		$sText = _ModiryText($sText)
+		; -続く- みたいな文字列を削除する
+		$sText = _DeleteMoreFromText($sText)
+		FileWriteLine($fLog, $sText)
 
 		; 前回取得した文字列と同じなら空振りする
 		If $sText == $sLastText Then
@@ -91,15 +117,14 @@ Func _Example()
 		; 発話
 		FileWriteLine($fLog, $sText)
 		$sLastText = $sText
-		$sSeikaSay2Command = @ComSpec & " /c " & """" & $sSeikaSay2Path & """ -cid " & $nCid & " -t " & $sText
+		$sSeikaSay2Command = @ComSpec & " /c " & """" & $sSeikaSay2Path & """ -cid " & $sCid & " -t " & $sText
 		RunWait($sSeikaSay2Command, "", @SW_HIDE)
-		;MsgBox(0, "", $sText)
 
 	WEnd
 
 	FileClose($fLog)
 
-EndFunc   ;==>_Example
+EndFunc   ;==>_Main
 
 Func _IsSpeakText($sText)	; 発話すべき文字列か否かを返す
 	If StringRegExp($sText, "-続く-$") Or StringRegExp($sText, "-more-$") Or StringRegExp($sText, "。$") Or StringRegExp($sText, "\.$") Or StringRegExp($sText, "！$") Or StringRegExp($sText, "!$") Then
@@ -110,11 +135,15 @@ Func _IsSpeakText($sText)	; 発話すべき文字列か否かを返す
 	
 EndFunc   ;==>_IsSpeakText
 
-Func _ModiryText($sText)	; 文字列から発話に不適な部分を削除する
+Func _DeleteMoreFromText($sText)
 	; 「-続く-」を削除
 	$sText = StringRegExpReplace($sText, "-続く-$", "")
 	$sText = StringRegExpReplace($sText, "-more-$", "")
 
+	Return $sText
+EndFunc   ;==>_DeleteMoreFromText
+
+Func _ModiryText($sText)	; 文字列から発話に不適な部分を削除する
 	; エゴの括弧を削除
 	$sText = StringReplace($sText, "(聖戦者)", " 聖戦者 ")
 	$sText = StringReplace($sText, "(防衛者)", " 防衛者 ")
@@ -131,9 +160,12 @@ Func _ModiryText($sText)	; 文字列から発話に不適な部分を削除す�
 	; 括弧を中身ごと削除
 	$sText = StringRegExpReplace($sText, "\(.*?\)", "")
 	$sText = StringRegExpReplace($sText, "\[.*?\]", "")
+	$sText = StringRegExpReplace($sText, "\{.*?\}", "")
 
-	; アスタリスクを削除
+	; 不要な文字を削除
 	$sText = StringReplace($sText, "*", "")
+	$sText = StringReplace($sText, ":", "")
+	$sText = StringReplace($sText, "ESC", "")
 
 	; 不要な空白を削除
 	$sText = StringStripWS($sText, $STR_STRIPLEADING + $STR_STRIPTRAILING + $STR_STRIPSPACES)
@@ -141,3 +173,16 @@ Func _ModiryText($sText)	; 文字列から発話に不適な部分を削除す�
 	Return $sText
 
 EndFunc   ;==>_ModiryText
+
+Func _AbnormalEnd($sMessage)	; メッセージダイアログを表示して終了する
+	MsgBox(16, Default, $sMessage)
+	Exit
+EndFunc   ;==>_AbnormalEnd
+
+Func _IniRead($sIniSection, $sIniKey)
+	Local $sValue = IniRead($sIniFileName, $sIniSection, $sIniKey, "")
+	If $sValue == "" Then
+		_AbnormalEnd($sIniFileName & " ファイルのセクション " & $sIniSection & " のキー " & $sIniKey & "が見つかりませんでした。終了します。")
+	EndIf
+	return $sValue
+EndFunc   ;==>_IniRead
